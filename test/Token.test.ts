@@ -12,7 +12,7 @@ describe('Token', function () {
     this.ownerAddress = signers[0].address;
     this.recipientAddress = signers[1].address;
 
-    this.syvoraToken = await this.Token.deploy(this.ownerAddress);
+    this.syvoraToken = await this.Token.deploy();
 
     this.decimals = await this.syvoraToken.decimals();
 
