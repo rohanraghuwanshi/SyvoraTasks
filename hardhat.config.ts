@@ -1,7 +1,8 @@
 import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
+import dotenv from 'dotenv'; 
 
-require('dotenv').config();
+dotenv.config();
 
 const ALCHEMY_API_URL_GOERLI = process.env.ALCHEMY_API_URL_GOERLI
 const GOERLI_PRIVATE_KEY = process.env.GOERLI_PRIVATE_KEY || ''
