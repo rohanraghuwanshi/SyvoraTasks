@@ -1,6 +1,5 @@
 import { ethers } from "hardhat";
 import { expect } from "chai";
-var BigNumber = require('big-number');
 
 describe("Shop Contract", function () {
 

@@ -1,6 +1,5 @@
 import { expect } from "chai";
 import { ethers } from "hardhat"
-
 // Start test block
 describe('Token', function () {
   before(async function () {
