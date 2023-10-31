@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 
 import "./Token.sol";
 
@@ -11,7 +12,7 @@ import "./Token.sol";
  * @dev This contract represents a simple shop that allows users to buy tokens using Ether.
  * Users can set the token price, purchase tokens, and withdraw funds.
  */
-contract Shop is Ownable {
+contract Shop is Ownable2Step {
     address public tokenContract; // The address of the ERC20 token contract used in the shop.
     uint256 public pricePerToken; // The price per token in Ether.
 
