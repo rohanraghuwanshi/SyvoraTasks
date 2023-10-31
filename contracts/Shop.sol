@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "./Token.sol";
 
@@ -21,7 +22,10 @@ contract Shop is Ownable2Step {
      * @param _tokenContract The address of the ERC20 token contract.
      * @param _initialPrice The initial price per token in Ether.
      */
-    constructor(address _tokenContract, uint256 _initialPrice) Ownable(msg.sender){
+    constructor(
+        address _tokenContract,
+        uint256 _initialPrice
+    ) Ownable(msg.sender) {
         tokenContract = _tokenContract;
         pricePerToken = _initialPrice;
     }
@@ -39,18 +43,23 @@ contract Shop is Ownable2Step {
      * @return maxTokens The maximum number of tokens that can be purchased with the sent Ether.
      * @return remainder The remaining Ether sent back to the user.
      */
-    function buy() public payable returns (uint256 maxTokens, uint256 remainder) {
+    function buy()
+        public
+        payable
+        returns (uint256 maxTokens, uint256 remainder)
+    {
         IERC20 token = IERC20(tokenContract);
         uint256 tokenBalance = token.balanceOf(address(this));
 
         require(tokenBalance > 0, "The shop is out of tokens");
 
-        maxTokens = (msg.value * 1e18) / pricePerToken;
+        unchecked {
+            maxTokens = (msg.value * 1e18) / pricePerToken;
 
-        if (maxTokens > tokenBalance) {
-            maxTokens = tokenBalance;
+            if (maxTokens > tokenBalance) {
+                maxTokens = tokenBalance;
+            }
         }
-
         uint256 totalPrice = (maxTokens * pricePerToken) / 1e18;
         remainder = msg.value - totalPrice;
 
@@ -59,7 +68,7 @@ contract Shop is Ownable2Step {
             "Shop does not have enough Ether for the remainder"
         );
 
-        require(token.transfer(msg.sender, maxTokens), "Token transfer failed");
+        SafeERC20.safeTransfer(IERC20(tokenContract), msg.sender, maxTokens);
         payable(owner()).transfer(totalPrice);
         if (remainder > 0) {
             payable(msg.sender).transfer(remainder);
@@ -81,6 +90,6 @@ contract Shop is Ownable2Step {
     function withdrawToken() public onlyOwner {
         IERC20 token = IERC20(tokenContract);
         uint256 tokenBalance = token.balanceOf(address(this));
-        require(token.transfer(owner(), tokenBalance), "Token transfer failed");
+        SafeERC20.safeTransfer(IERC20(tokenContract), owner(), tokenBalance);
     }
 }

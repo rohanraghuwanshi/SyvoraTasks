@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /**
  * @title NFT
@@ -32,8 +33,7 @@ contract NFT is ERC721, Ownable {
             revert("Token with the given ERC20 amount has already been minted");
         }
 
-        IERC20 erc20Token = IERC20(erc20Address);
-        erc20Token.transferFrom(msg.sender, address(this), _erc20Amount);
+        SafeERC20.safeTransferFrom(IERC20(erc20Address), msg.sender, address(this), _erc20Amount);
 
         uint256 tokenId = _erc20Amount;
         _mint(msg.sender, tokenId);
@@ -47,6 +47,6 @@ contract NFT is ERC721, Ownable {
     function withdrawToken() public onlyOwner {
         IERC20 token = IERC20(erc20Address);
         uint256 tokenBalance = token.balanceOf(address(this));
-        require(token.transfer(owner(), tokenBalance), "Token transfer failed");
+        SafeERC20.safeTransfer(IERC20(erc20Address), owner(), tokenBalance);
     }
 }
