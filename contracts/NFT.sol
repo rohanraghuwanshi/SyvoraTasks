@@ -5,12 +5,13 @@ import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /**
  * @title NFT
  * @dev This contract allows users to mint ERC721 tokens using ERC20 tokens as collateral.
  */
-contract NFT is ERC721, Ownable {
+contract NFT is ERC721, Ownable, ReentrancyGuard {
     address public erc20Address;
 
     // Maps ERC20 amounts to corresponding token IDs.
@@ -28,7 +29,7 @@ contract NFT is ERC721, Ownable {
      * @dev Allows a user to mint an ERC721 token by providing a specific amount of ERC20 tokens as collateral.
      * @param _erc20Amount The amount of ERC20 tokens to use as collateral for minting.
      */
-    function mintWithERC20(uint256 _erc20Amount) public {
+    function mintWithERC20(uint256 _erc20Amount) public nonReentrant {
         if (tokenIdsByERC20Amount[_erc20Amount] != 0) {
             revert("Token with the given ERC20 amount has already been minted");
         }
@@ -44,7 +45,7 @@ contract NFT is ERC721, Ownable {
     /**
      * @dev Allows the owner of the contract to withdraw any remaining ERC20 tokens from the contract.
      */
-    function withdrawToken() public onlyOwner {
+    function withdrawToken() public onlyOwner nonReentrant {
         IERC20 token = IERC20(erc20Address);
         uint256 tokenBalance = token.balanceOf(address(this));
         SafeERC20.safeTransfer(IERC20(erc20Address), owner(), tokenBalance);

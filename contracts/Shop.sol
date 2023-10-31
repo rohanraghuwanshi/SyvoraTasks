@@ -5,6 +5,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 import "./Token.sol";
 
@@ -13,7 +14,7 @@ import "./Token.sol";
  * @dev This contract represents a simple shop that allows users to buy tokens using Ether.
  * Users can set the token price, purchase tokens, and withdraw funds.
  */
-contract Shop is Ownable2Step {
+contract Shop is Ownable2Step, ReentrancyGuard {
     address public tokenContract; // The address of the ERC20 token contract used in the shop.
     uint256 public pricePerToken; // The price per token in Ether.
 
@@ -46,6 +47,7 @@ contract Shop is Ownable2Step {
     function buy()
         public
         payable
+        nonReentrant
         returns (uint256 maxTokens, uint256 remainder)
     {
         IERC20 token = IERC20(tokenContract);
@@ -80,14 +82,14 @@ contract Shop is Ownable2Step {
     /**
      * @dev Allows the owner to withdraw the Ether balance of the shop.
      */
-    function withdraw() public onlyOwner {
+    function withdraw() public onlyOwner nonReentrant {
         payable(owner()).transfer(address(this).balance);
     }
 
     /**
      * @dev Allows the owner to withdraw any remaining tokens from the shop.
      */
-    function withdrawToken() public onlyOwner {
+    function withdrawToken() public onlyOwner nonReentrant {
         IERC20 token = IERC20(tokenContract);
         uint256 tokenBalance = token.balanceOf(address(this));
         SafeERC20.safeTransfer(IERC20(tokenContract), owner(), tokenBalance);
