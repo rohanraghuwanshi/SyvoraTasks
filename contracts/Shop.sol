@@ -52,6 +52,7 @@ contract Shop is Ownable2Step, ReentrancyGuard {
     {
         IERC20 token = IERC20(tokenContract);
         uint256 tokenBalance = token.balanceOf(address(this));
+        uint256 totalPrice;
 
         require(tokenBalance > 0, "The shop is out of tokens");
 
@@ -61,9 +62,10 @@ contract Shop is Ownable2Step, ReentrancyGuard {
             if (maxTokens > tokenBalance) {
                 maxTokens = tokenBalance;
             }
+
+            totalPrice = (maxTokens * pricePerToken) / 1e18;
+            remainder = msg.value - totalPrice;
         }
-        uint256 totalPrice = (maxTokens * pricePerToken) / 1e18;
-        remainder = msg.value - totalPrice;
 
         require(
             address(this).balance >= remainder,
