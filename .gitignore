@@ -10,3 +10,5 @@ cache
 artifacts
 
 .vscode/settings.json
+contracts/.DS_Store
+.DS_Store

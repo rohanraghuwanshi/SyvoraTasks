@@ -1,34 +1,16 @@
 {
-  "name": "erc20token",
+  "name": "shop",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@nomicfoundation/hardhat-chai-matchers": "^2.0.2",
-    "@nomicfoundation/hardhat-ethers": "^3.0.4",
-    "@nomicfoundation/hardhat-network-helpers": "^1.0.9",
     "@nomicfoundation/hardhat-toolbox": "^3.0.0",
-    "@nomicfoundation/hardhat-verify": "^1.1.1",
-    "@nomiclabs/hardhat-ethers": "^2.2.3",
-    "@typechain/ethers-v6": "^0.4.3",
-    "@typechain/hardhat": "^8.0.3",
-    "@types/chai": "^4.3.9",
-    "@types/mocha": "^10.0.3",
-    "big-number": "^2.0.0",
-    "chai": "^4.3.10",
-    "ethers": "^6.8.0",
-    "hardhat": "^2.18.3",
-    "hardhat-gas-reporter": "^1.0.9",
-    "solidity-coverage": "^0.8.5",
-    "ts-node": "^10.9.1",
-    "typechain": "^8.3.2",
-    "typescript": "^5.2.2"
+    "hardhat": "^2.18.3"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^5.0.0"
