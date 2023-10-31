@@ -1,7 +1,8 @@
 import { toBigInt } from "ethers";
 import { ethers } from "hardhat";
+import dotenv from 'dotenv'; 
 
-require('dotenv').config();
+dotenv.config();
 
 async function main() {
 
