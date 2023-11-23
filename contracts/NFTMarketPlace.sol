@@ -1,34 +1,43 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {ERC1155Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol";
-import {ERC721Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
-import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import {IERC1155} from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
+import "hardhat/console.sol";
 
 /**
  * @title NFTMarketplace
  * @dev A simple upgradeable NFT marketplace contract with ERC1155 and ERC721 support.
  */
-contract NFTMarketplace is Initializable, OwnableUpgradeable {
+contract NFTMarketplace is Ownable2Step, ReentrancyGuard  {
+    /**
+     * @dev Struct to represent a sale.
+     */
     struct Sale {
-        address owner;
-        address tokenAddress;
-        uint256 tokenId;
-        uint256 quantity;
-        uint256 price;
-        address paymentToken;
+        address owner; // Address of the sale owner.
+        address tokenAddress; // Address of the token being sold.
+        uint256 tokenId; // ID of the token being sold.
+        uint256 quantity; // Quantity of tokens for sale.
+        uint256 price; // Price per token.
+        address paymentToken; // Address of the token used for payment.
     }
 
-    mapping(uint256 => Sale) public sales;
-    mapping(address => mapping(uint256 => uint256)) public erc721SaleMap;
+    /**
+     * @dev Mapping to store sales information with a string key.
+     * The key is constructed by concatenating the owner's address, token address,
+     * and token ID, separated by underscores.
+     */
+    mapping(string => Sale) public sales;
 
     /**
      * @dev Emitted when a sale is created or updated.
      */
     event SaleUpdated(
-        uint256 saleId,
         address indexed owner,
         address indexed tokenAddress,
         uint256 indexed tokenId,
@@ -40,23 +49,19 @@ contract NFTMarketplace is Initializable, OwnableUpgradeable {
     /**
      * @dev Emitted when an NFT is bought.
      */
-    event NFTBought(uint256 saleId, address indexed buyer);
+    event NFTBought(string saleId, address indexed buyer);
 
     /**
      * @dev Emitted when marketplace owner withdraws fees.
      */
     event FeeWithdrawn(uint256 amount);
 
-    uint256 public constant FEE_PERCENTAGE = 55;
-
-    /**
+     /**
      * @dev Initializes the contract.
      */
-    function initialize() public initializer {
-        __Ownable_init(msg.sender);
-    }
+    constructor() Ownable(msg.sender) {}
 
-    /**
+        /**
      * @dev Creates or updates a sale for ERC1155 tokens.
      * @param tokenAddress Address of the ERC1155 contract.
      * @param tokenId Unique ID of the asset.
@@ -64,7 +69,7 @@ contract NFTMarketplace is Initializable, OwnableUpgradeable {
      * @param price Price of the asset.
      * @param paymentToken Acceptable ERC20 token address as payment.
      */
-    function createOrUpdateSaleERC1155(
+    function createOrUpdateERC721Sale(
         address tokenAddress,
         uint256 tokenId,
         uint256 quantity,
@@ -73,23 +78,18 @@ contract NFTMarketplace is Initializable, OwnableUpgradeable {
     ) external {
         require(quantity > 0, "Quantity must be greater than 0");
 
-        ERC1155Upgradeable erc1155Contract = ERC1155Upgradeable(tokenAddress);
-
-        require(erc1155Contract.balanceOf(msg.sender, tokenId)>=quantity, "Insufficient Tokens Owned");
-
-        address owner = msg.sender;
-
-        Sale storage sale = sales[tokenId];
-        sale.owner = owner;
+        Sale storage sale = sales[string(abi.encodePacked(msg.sender, tokenAddress, tokenId))];
+        sale.owner = msg.sender;
         sale.tokenAddress = tokenAddress;
         sale.tokenId = tokenId;
         sale.quantity = quantity;
         sale.price = price;
         sale.paymentToken = paymentToken;
 
+        IERC721(tokenAddress).setApprovalForAll(address(this), true);
+
         emit SaleUpdated(
-            tokenId,
-            owner,
+            msg.sender,
             tokenAddress,
             tokenId,
             quantity,
@@ -98,66 +98,58 @@ contract NFTMarketplace is Initializable, OwnableUpgradeable {
         );
     }
 
-    /**
-     * @dev Creates or updates a sale for ERC721 tokens.
-     * @param tokenAddress Address of the ERC721 contract.
-     * @param tokenId Unique ID of the asset.
-     * @param price Price of the asset.
-     * @param paymentToken Acceptable ERC20 token address as payment.
-     */
-    function createOrUpdateSaleERC721(
+    function createOrUpdateERC1155Sale(
         address tokenAddress,
         uint256 tokenId,
+        uint256 quantity,
         uint256 price,
         address paymentToken
     ) external {
-        ERC721Upgradeable erc721Contract = ERC721Upgradeable(tokenAddress);
-        address owner = erc721Contract.ownerOf(tokenId);
+        require(quantity > 0, "Quantity must be greater than 0");
 
-        Sale storage sale = sales[tokenId];
-        sale.owner = owner;
+        console.logBytes(abi.encodePacked(msg.sender, tokenAddress, tokenId));
+
+        Sale storage sale = sales[string(abi.encodePacked(msg.sender, tokenAddress, tokenId))];
+        sale.owner = msg.sender;
         sale.tokenAddress = tokenAddress;
         sale.tokenId = tokenId;
-        sale.quantity = 1; // For ERC721, quantity is always 1
+        sale.quantity = quantity;
         sale.price = price;
         sale.paymentToken = paymentToken;
 
-        erc721SaleMap[tokenAddress][tokenId] = tokenId;
+        IERC1155(tokenAddress).setApprovalForAll(address(this), true);
 
         emit SaleUpdated(
-            tokenId,
-            owner,
+            msg.sender,
             tokenAddress,
             tokenId,
-            1,
+            quantity,
             price,
             paymentToken
         );
     }
 
+    function getSaleDetails(address _owner, address tokenAddress, uint256 tokenId) external view returns (Sale memory) {
+
+        string memory key = string(abi.encodePacked(_owner, tokenAddress, tokenId));
+        return sales[key];
+    }
+
     /**
-     * @dev Buys an NFT.
+     * @dev Buys an ERC721.
      * @param saleId ID of the sale.
      */
-    function buyNFT(uint256 saleId) external payable {
+    function buyERC721(string memory saleId) external payable {
         Sale storage sale = sales[saleId];
 
         require(sale.quantity > 0, "Sale does not exist");
-        require(
-            sale.quantity <=
-                ERC1155Upgradeable(sale.tokenAddress).balanceOf(
-                    sale.owner,
-                    sale.tokenId
-                ),
-            "Insufficient quantity"
-        );
 
         if (sale.paymentToken == address(0)) {
             require(msg.value == sale.price, "Incorrect ETH value sent");
             payable(sale.owner).transfer(sale.price);
         } else {
             require(
-                ERC20Upgradeable(sale.paymentToken).transferFrom(
+                IERC20(sale.paymentToken).transferFrom(
                     msg.sender,
                     sale.owner,
                     sale.price
@@ -166,26 +158,32 @@ contract NFTMarketplace is Initializable, OwnableUpgradeable {
             );
         }
 
-        if (sale.quantity > 1) {
-            ERC1155Upgradeable(sale.tokenAddress).safeTransferFrom(
-                sale.owner,
-                msg.sender,
-                sale.tokenId,
-                sale.quantity,
-                ""
-            );
+        IERC721(sale.tokenAddress).transferFrom(sale.owner, msg.sender,sale.tokenId);
+        delete sales[saleId];
+        emit NFTBought(saleId, msg.sender);
+    }
+
+    function buyERC1155(string memory saleId) external payable {
+        Sale storage sale = sales[saleId];
+
+        require(sale.quantity > 0, "Sale does not exist");
+
+        if (sale.paymentToken == address(0)) {
+            require(msg.value == sale.price, "Incorrect ETH value sent");
+            payable(sale.owner).transfer(sale.price);
         } else {
-            ERC721Upgradeable(sale.tokenAddress).safeTransferFrom(
-                sale.owner,
-                msg.sender,
-                sale.tokenId
+            require(
+                IERC20(sale.paymentToken).transferFrom(
+                    msg.sender,
+                    sale.owner,
+                    sale.price
+                ),
+                "Payment failed"
             );
-            erc721SaleMap[sale.tokenAddress][sale.tokenId] = 0;
         }
 
-        uint256 feeAmount = (sale.price * FEE_PERCENTAGE) / 10000;
-        payable(owner()).transfer(feeAmount);
-
+        IERC1155(sale.tokenAddress).safeTransferFrom(sale.owner, msg.sender,sale.tokenId, sale.quantity,"");
+        delete sales[saleId];
         emit NFTBought(saleId, msg.sender);
     }
 
