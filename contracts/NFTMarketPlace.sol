@@ -32,7 +32,7 @@ contract NFTMarketplace is Ownable2Step, ReentrancyGuard  {
      * The key is constructed by concatenating the owner's address, token address,
      * and token ID, separated by underscores.
      */
-    mapping(string => Sale) public sales;
+    mapping(bytes => Sale) public sales;
 
     /**
      * @dev Emitted when a sale is created or updated.
@@ -49,12 +49,7 @@ contract NFTMarketplace is Ownable2Step, ReentrancyGuard  {
     /**
      * @dev Emitted when an NFT is bought.
      */
-    event NFTBought(string saleId, address indexed buyer);
-
-    /**
-     * @dev Emitted when marketplace owner withdraws fees.
-     */
-    event FeeWithdrawn(uint256 amount);
+    event NFTBought(bytes saleId, address indexed buyer);
 
      /**
      * @dev Initializes the contract.
@@ -78,15 +73,13 @@ contract NFTMarketplace is Ownable2Step, ReentrancyGuard  {
     ) external {
         require(quantity > 0, "Quantity must be greater than 0");
 
-        Sale storage sale = sales[string(abi.encodePacked(msg.sender, tokenAddress, tokenId))];
+        Sale storage sale = sales[abi.encodePacked(msg.sender, tokenAddress, tokenId)];
         sale.owner = msg.sender;
         sale.tokenAddress = tokenAddress;
         sale.tokenId = tokenId;
         sale.quantity = quantity;
         sale.price = price;
         sale.paymentToken = paymentToken;
-
-        IERC721(tokenAddress).setApprovalForAll(address(this), true);
 
         emit SaleUpdated(
             msg.sender,
@@ -107,17 +100,13 @@ contract NFTMarketplace is Ownable2Step, ReentrancyGuard  {
     ) external {
         require(quantity > 0, "Quantity must be greater than 0");
 
-        console.logBytes(abi.encodePacked(msg.sender, tokenAddress, tokenId));
-
-        Sale storage sale = sales[string(abi.encodePacked(msg.sender, tokenAddress, tokenId))];
+        Sale storage sale = sales[abi.encodePacked(msg.sender, tokenAddress, tokenId)];
         sale.owner = msg.sender;
         sale.tokenAddress = tokenAddress;
         sale.tokenId = tokenId;
         sale.quantity = quantity;
         sale.price = price;
         sale.paymentToken = paymentToken;
-
-        IERC1155(tokenAddress).setApprovalForAll(address(this), true);
 
         emit SaleUpdated(
             msg.sender,
@@ -129,17 +118,11 @@ contract NFTMarketplace is Ownable2Step, ReentrancyGuard  {
         );
     }
 
-    function getSaleDetails(address _owner, address tokenAddress, uint256 tokenId) external view returns (Sale memory) {
-
-        string memory key = string(abi.encodePacked(_owner, tokenAddress, tokenId));
-        return sales[key];
-    }
-
     /**
      * @dev Buys an ERC721.
      * @param saleId ID of the sale.
      */
-    function buyERC721(string memory saleId) external payable {
+    function buyERC721(bytes calldata saleId) external payable {
         Sale storage sale = sales[saleId];
 
         require(sale.quantity > 0, "Sale does not exist");
@@ -163,7 +146,7 @@ contract NFTMarketplace is Ownable2Step, ReentrancyGuard  {
         emit NFTBought(saleId, msg.sender);
     }
 
-    function buyERC1155(string memory saleId) external payable {
+    function buyERC1155(bytes memory saleId) external payable {
         Sale storage sale = sales[saleId];
 
         require(sale.quantity > 0, "Sale does not exist");
@@ -185,15 +168,6 @@ contract NFTMarketplace is Ownable2Step, ReentrancyGuard  {
         IERC1155(sale.tokenAddress).safeTransferFrom(sale.owner, msg.sender,sale.tokenId, sale.quantity,"");
         delete sales[saleId];
         emit NFTBought(saleId, msg.sender);
-    }
-
-    /**
-     * @dev Allows the marketplace owner to withdraw fees.
-     */
-    function withdrawFees() external onlyOwner {
-        uint256 balance = address(this).balance;
-        payable(owner()).transfer(balance);
-        emit FeeWithdrawn(balance);
     }
 
     /**
